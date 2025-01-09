@@ -24,6 +24,7 @@
             width: 90%;
             max-width: 900px;
             border: 3px solid #a5f0c7; /* Glowing green border */
+            position: relative; /* For disclaimer positioning */
         }
 
         h1 {
@@ -31,6 +32,37 @@
             margin-bottom: 30px;
             font-size: 3em;
             text-shadow: 0 0 10px #57d894; /* Green glow effect */
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .header-title {
+            font-size: 3em;
+            text-shadow: 0 0 10px #57d894;
+            margin: 0;
+        }
+
+        .header-link {
+            color: #a5f0c7;
+            text-decoration: none;
+            font-size: 1.5em;
+            border: 2px solid #57d894;
+            padding: 5px 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px #57d894;
+            transition: all 0.3s ease;
+        }
+
+        .header-link:hover {
+            background-color: #57d894;
+            color: #0d1a21;
+            text-shadow: none;
         }
 
         .content {
@@ -135,12 +167,110 @@
         .non-recyclable {
             background-color: #d9534f;
         }
+
+        .timer-container {
+            position: relative;
+            font-size: 24px;
+            color: #a5f0c7;
+            z-index: 10;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+
+        .disclaimer-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .disclaimer-content {
+            background-color: rgba(26, 59, 42, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            border: 3px solid #a5f0c7;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            color: #a5f0c7;
+            position: relative;
+        }
+
+        .disclaimer-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            color: #a5f0c7;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            padding: 5px;
+            border: none;
+            background: transparent;
+        }
+
+        .disclaimer-close:hover {
+            color: #57d894;
+            text-shadow: 0 0 5px #57d894;
+        }
+
+        .disclaimer p {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .disclaimer button {
+            background-color: #57d894;
+            color: #0d1a21;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .disclaimer button:hover {
+            background-color: #449d44;
+            color: #a5f0c7;
+        }
+
+        .disclaimer-bubble {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #57d894;
+            color: #0d1a21;
+            border: 2px solid #a5f0c7;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            z-index: 101;
+            transition: all 0.3s ease;
+        }
+
+        .disclaimer-bubble:hover {
+            background-color: #449d44;
+            color: #a5f0c7;
+            box-shadow: 0 0 10px #57d894;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>GreenEye</h1>
+        <div class="header">
+            <a href="#" onclick="window.location.reload();" class="header-link">GreenEye <span style="font-size: smaller;">[Experiment]</span></a>
+        </div>
         <div class="content">
             <div id="webcam-container">
                 <div id="predictionText" class="prediction-text"></div>
@@ -149,20 +279,34 @@
                 <div class="start-button-container">
                     <button id="startButton" onclick="init()">Start</button>
                 </div>
-                <div class="control-buttons" style="display: none">
+                <div class="control-buttons" style="display: none;">
                     <button id="stopButton" onclick="stopWebcam()">Stop</button>
                     <button id="cameraOffButton" onclick="turnOffCamera()">Camera Off</button>
                 </div>
             </div>
         </div>
+        <div class="timer-container" id="timer"></div>
         <div id="label-container"></div>
     </div>
+
+    <div class="disclaimer-overlay" id="disclaimerOverlay">
+        <div class="disclaimer-content">
+            <button class="disclaimer-close" onclick="hideDisclaimer()">X</button>
+            <p id="disclaimerMessage">To maintain efficiency, your connection will close in <span id="timeLeft"></span> seconds! Click Continue to reset.</p>
+            <button onclick="window.location.reload();">Continue</button>
+        </div>
+    </div>
+    <button class="disclaimer-bubble" id="disclaimerBubble" onclick="showDisclaimer()" style="display: none;">
+        i
+    </button>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/Ak4X-9Gel/";
         let model, webcam, labelContainer, maxPredictions;
+        let timerInterval;
+        let timeLeft = 60; // 1 minute in seconds
 
         // Initialize webcam globally
         const flip = true;
@@ -198,13 +342,16 @@
                 labelContainer.appendChild(progressBarContainer);
             }
 
-            // Show control buttons, hide start button
-            document.querySelector('.control-buttons').style.display = 'flex';
+            // Hide start button, show control buttons
             document.getElementById("startButton").style.display = 'none';
+            document.querySelector('.control-buttons').style.display = 'flex';
+
+            // Start the timer
+            startTimer();
         }
 
         async function loop() {
-            webcam.update();
+            webcam.update(); // Update the webcam frame
             await predict();
             window.requestAnimationFrame(loop);
         }
@@ -253,18 +400,62 @@
         }
 
         function stopWebcam() {
-            webcam.stop();
-            if (webcam.canvas.parentNode) {
-                webcam.canvas.parentNode.removeChild(webcam.canvas);
-            }
-            document.querySelector('.control-buttons').style.display = 'none';
-            document.getElementById("startButton").style.display = 'block';
+            window.location.reload(); // Reload the page
         }
 
         function turnOffCamera() {
             webcam.pause();
             document.getElementById("startButton").style.display = 'block';
             document.querySelector('.control-buttons').style.display = 'none';
+        }
+
+        function startTimer() {
+            timeLeft = 60; // Reset to 1 minute
+            updateTimerDisplay(); // Update display immediately
+
+            clearInterval(timerInterval); // Clear any existing timer
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    window.location.reload(); // Reload the page
+                } else if (timeLeft <= 15) {
+                    showDisclaimer();
+                }
+
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const timerElement = document.getElementById("timer");
+            if (timerElement) {
+                timerElement.textContent = `Time Left: ${timeLeft}s`;
+            }
+            const disclaimerMessage = document.getElementById("disclaimerMessage");
+            if (disclaimerMessage) {
+                disclaimerMessage.textContent = `To maintain efficiency, your connection will close in ${timeLeft} seconds! Click Continue to reset.`;
+            }
+        }
+
+        function showDisclaimer() {
+            const disclaimerOverlay = document.getElementById("disclaimerOverlay");
+            const disclaimerBubble = document.getElementById("disclaimerBubble");
+
+            if (timeLeft <= 15) {
+                disclaimerOverlay.style.display = "flex";
+                disclaimerBubble.style.display = "none"; // Hide the bubble when showing the disclaimer
+            } else {
+                disclaimerOverlay.style.display = "none";
+                disclaimerBubble.style.display = "block"; // Show the bubble otherwise
+            }
+        }
+
+        function hideDisclaimer() {
+            document.getElementById("disclaimerOverlay").style.display = "none";
+            document.getElementById("disclaimerBubble").style.display = "block";
         }
     </script>
 </body>
