@@ -135,24 +135,6 @@
         .non-recyclable {
             background-color: #d9534f;
         }
-
-        .insights-panel {
-            margin-top: 20px;
-            padding: 15px;
-            border: 2px solid #57d894;
-            border-radius: 10px;
-            text-align: left;
-        }
-
-        .insights-panel h3 {
-            margin-top: 0;
-            color: #57d894;
-        }
-
-        .insights-panel p {
-            margin: 5px 0;
-            font-size: 18px;
-        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -170,18 +152,10 @@
                 <div class="control-buttons" style="display: none">
                     <button id="stopButton" onclick="stopWebcam()">Stop</button>
                     <button id="cameraOffButton" onclick="turnOffCamera()">Camera Off</button>
-                    <button id="stopSpeakingButton" onclick="stopSpeaking()">Stop Speaking</button>
-                    <button id="startSpeakingButton" onclick="startSpeaking()" style="display: none;">Start Speaking</button>
                 </div>
             </div>
         </div>
         <div id="label-container"></div>
-        <div class="insights-panel">
-            <h3>Insights</h3>
-            <p>Total Items Scanned: <span id="totalScanned">0</span></p>
-            <p>Recyclable Items: <span id="recyclableCount">0</span></p>
-            <p>Non-Recyclable Items: <span id="nonRecyclableCount">0</span></p>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -189,12 +163,6 @@
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/Ak4X-9Gel/";
         let model, webcam, labelContainer, maxPredictions;
-        let stopSpeak = false; // Flag to stop speaking
-        let lastSpokenTime = Date.now();
-        const speakCooldown = 5000; // 5 seconds cooldown
-        let totalScanned = 0;
-        let recyclableItems = 0;
-        let nonRecyclableItems = 0;
 
         // Initialize webcam globally
         const flip = true;
@@ -271,20 +239,6 @@
 
             // Update on-screen text
             updatePredictionText(bestPrediction, highestProbability);
-
-            // Speak and update insights only if conditions are met
-            if (highestProbability > 0.5) {
-                lastSpokenTime = Date.now();
-                totalScanned++;
-                if (bestPrediction === 'Recyclable Items') {
-                    speakIfReady('Recyclable');
-                    recyclableItems++;
-                } else if (bestPrediction === 'Non-Recyclable Items') {
-                    speakIfReady('Non-Recyclable');
-                    nonRecyclableItems++;
-                }
-                updateInsights();
-            }
         }
 
         function updatePredictionText(bestPrediction, highestProbability) {
@@ -296,40 +250,6 @@
                     predictionTextElement.textContent = '';
                 }
             }
-        }
-
-        function speakIfReady(text) {
-            const currentTime = Date.now();
-            if (currentTime - lastSpokenTime > speakCooldown && !stopSpeak) {
-                speak(text);
-                lastSpokenTime = currentTime;
-            }
-        }
-
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.onend = () => { stopSpeak = false; };
-                window.speechSynthesis.speak(utterance);
-                stopSpeak = true;
-            } else {
-                console.log('Text-to-speech not supported or stopped by user.');
-            }
-        }
-
-        function stopSpeaking() {
-            if ('speechSynthesis' in window) {
-                stopSpeak = true;
-                window.speechSynthesis.cancel();
-            }
-            document.getElementById("stopSpeakingButton").style.display = 'none';
-            document.getElementById("startSpeakingButton").style.display = 'block';
-        }
-
-        function startSpeaking() {
-            stopSpeak = false;
-            document.getElementById("startSpeakingButton").style.display = 'none';
-            document.getElementById("stopSpeakingButton").style.display = 'block';
         }
 
         function stopWebcam() {
@@ -345,12 +265,6 @@
             webcam.pause();
             document.getElementById("startButton").style.display = 'block';
             document.querySelector('.control-buttons').style.display = 'none';
-        }
-
-        function updateInsights() {
-            document.getElementById("totalScanned").textContent = totalScanned;
-            document.getElementById("recyclableCount").textContent = recyclableItems;
-            document.getElementById("nonRecyclableCount").textContent = nonRecyclableItems;
         }
     </script>
 </body>
